@@ -1,8 +1,21 @@
-# @r0r4x/sdk — JavaScript & TypeScript client for r0r4x Public API v1
 
-A lightweight, fully typed SDK for consuming the r0r4x Public API v1 from Node.js or modern runtimes with `fetch` support.
+# **@r0r4x/sdk — Official JavaScript & TypeScript Client for r0r4x Public API v1**
 
-## Installation
+The official SDK for accessing **r0r4x Public API v1**, an intelligence layer that monitors humanoid robotics adoption, AI-driven geopolitical risk, and real-time global narrative signals.
+
+This SDK is intended for:
+
+* AI agents and autonomous systems
+* Prediction markets and on-chain protocols
+* Quantitative and macro researchers
+* Robotics and AI analytics
+* Automated workflows and decision pipelines
+
+The package is lightweight, fully typed, ESM-first, and compatible with multiple runtimes including Node, Deno, Bun, and serverless environments.
+
+---
+
+# Installation
 
 ```bash
 npm install @r0r4x/sdk
@@ -10,81 +23,187 @@ npm install @r0r4x/sdk
 pnpm add @r0r4x/sdk
 ```
 
-## Prerequisiti
+---
 
-- Una API key r0r4x generata dalla Developer Console.
-- Un `baseUrl`, per esempio:
-  - `https://r0r4x.com` (quando sarà live)
-  - L'URL Vercel corrente, es: `https://r0r4x-km0el7ba6-fluidtypes-projects.vercel.app`
+# Prerequisites
 
-Se l'ambiente non espone `fetch` (es. Node.js < 18), passa una implementazione custom tramite la config.
+### 1. A valid r0r4x API Key
 
-## Quick Start
+This can be generated in the dashboard at:
+**r0r4x.com → Dashboard → Developer → API Keys**
+
+### 2. Base URL
+
+Production base URL (always the same):
+
+```
+https://r0r4x.com
+```
+
+### 3. Environment variables (recommended)
+
+Create a `.env` file:
+
+```env
+R0R4X_API_KEY=your_api_key_here
+R0R4X_BASE_URL=https://r0r4x.com
+```
+
+Load it in Node.js (optional):
+
+```ts
+import "dotenv/config";
+```
+
+---
+
+# Quick Start
 
 ```ts
 import { R0r4xClient } from "@r0r4x/sdk";
+import "dotenv/config";
 
 const client = new R0r4xClient({
-  baseUrl: "https://r0r4x-km0el7ba6-fluidtypes-projects.vercel.app",
+  baseUrl: process.env.R0R4X_BASE_URL!,
   apiKey: process.env.R0R4X_API_KEY!,
 });
 
 async function main() {
-  const latestHpi = await client.hpi.getLatest();
-  console.log(latestHpi);
+  const hpi = await client.hpi.getLatest();
+  console.log("Latest HPI:", hpi);
 
-  const worldWartech = await client.wartech.getHistory({ region: "WORLD", range: 90 });
-  console.log(worldWartech.points.length, "wartech points");
+  const war = await client.wartech.getHistory({ region: "WORLD", range: 90 });
+  console.log("WarTech points:", war.points.length);
 
-  const news = await client.news.getLatest({ range: "2h", kind: "EVENT" });
-  console.log(news.news.slice(0, 3));
+  const news = await client.news.getLatest({ range: "2h" });
+  console.log("Recent news:", news.news.slice(0, 2));
 }
 
 main().catch(console.error);
 ```
 
-## Configurazione
+---
 
-`R0r4xClientConfig` accetta:
+# Public API v1 — Supported Endpoints
 
-- `baseUrl` (string): host di r0r4x (es. `https://r0r4x.com`).
-- `apiKey` (string): API key in chiaro.
-- `fetch` (opzionale): implementazione alternativa di `fetch` (utile in Node < 18, Deno, Cloudflare Workers, test, ecc.).
+The SDK provides access to six read-only, stable endpoints.
 
-## API Reference
+## Humanoid Panic Index (HPI)
 
-- `client.hpi.getLatest(): Promise<HpiLatestResponse>`
-- `client.hpi.getHistory({ country, range? }): Promise<HpiHistoryResponse>`
-- `client.wartech.getLatest(): Promise<WartechLatestResponse>`
-- `client.wartech.getHistory({ region?, range? }): Promise<WartechHistoryResponse>`
-- `client.news.getLatest({ range?, kind?, region?, severity? }): Promise<WartechNewsLatestResponse>`
-- `client.news.getIndex({ range? }): Promise<WartechNewsIndexResponse>`
+* `GET /api/public/hpi/latest`
+* `GET /api/public/hpi/history?country=US&range=3M`
 
-## Errori
+## WarTech (AI-driven geopolitical signals)
 
-Lo SDK solleva `R0r4xApiError` quando il server risponde con `{ status, error, message }`.
+* `GET /api/public/wartech/latest`
+* `GET /api/public/wartech/history?region=WORLD&range=90`
+
+## NewsPulse (real-time global event and narrative signals)
+
+* `GET /api/public/news/latest?range=2h`
+* `GET /api/public/news/index?range=90d`
+
+All endpoints require a Bearer API Key for authentication.
+
+---
+
+# SDK API Reference
+
+### HPI
 
 ```ts
-import { R0r4xClient, R0r4xApiError } from "@r0r4x/sdk";
+client.hpi.getLatest(): Promise<HpiLatestResponse>
+client.hpi.getHistory({ country, range? }): Promise<HpiHistoryResponse>
+```
+
+### WarTech
+
+```ts
+client.wartech.getLatest(): Promise<WartechLatestResponse>
+client.wartech.getHistory({ region?, range? }): Promise<WartechHistoryResponse>
+```
+
+### NewsPulse
+
+```ts
+client.news.getLatest({ range?, kind?, region?, severity? }): Promise<WartechNewsLatestResponse>
+client.news.getIndex({ range? }): Promise<WartechNewsIndexResponse>
+```
+
+All parameters follow backend-enforced enums and validation rules.
+
+---
+
+# Error Handling
+
+The SDK throws a standardized error object (`R0r4xApiError`) whenever the API responds with an error payload.
+
+Example:
+
+```ts
+import { R0r4xApiError } from "@r0r4x/sdk";
 
 try {
   await client.hpi.getLatest();
 } catch (err) {
   if (err instanceof R0r4xApiError) {
     console.error("API error:", err.status, err.code, err.message);
-  } else {
-    console.error("Unknown error", err);
   }
 }
 ```
 
-Codici tipici:
+Standard API error codes include:
 
-- `UNAUTHORIZED` → API key assente o invalida
-- `FORBIDDEN` → API key revocata/disattivata
-- `BAD_REQUEST` → parametri invalidi
-- Altri status HTTP vengono riportati con un errore generico
+| Code             | Description                  |
+| ---------------- | ---------------------------- |
+| `UNAUTHORIZED`   | Missing or invalid API key   |
+| `FORBIDDEN`      | API key revoked or inactive  |
+| `BAD_REQUEST`    | Invalid parameters           |
+| `NOT_FOUND`      | Resource not found           |
+| `INTERNAL_ERROR` | Unexpected server-side error |
 
-## Versioning / v1 Freeze
+---
 
-Questo SDK è allineato alla Public API **v1**. Eventuali breaking changes futuri saranno pubblicati come v2.
+# Runtime Compatibility
+
+| Runtime            | Support                                     |
+| ------------------ | ------------------------------------------- |
+| Node.js ≥ 18       | Supported (native `fetch`)                  |
+| Node.js < 18       | Supported via custom `fetch` implementation |
+| Deno               | Supported                                   |
+| Bun                | Supported                                   |
+| Cloudflare Workers | Supported                                   |
+
+Example with custom `fetch`:
+
+```ts
+import fetch from "node-fetch";
+
+const client = new R0r4xClient({
+  baseUrl: "https://r0r4x.com",
+  apiKey: "...",
+  fetch,
+});
+```
+
+---
+
+# Versioning Policy
+
+This SDK corresponds to **r0r4x Public API v1**.
+Breaking changes will only be introduced in **v2**, with deprecation details announced beforehand.
+
+---
+
+# License
+
+The Apache License 2.0
+
+---
+
+# About r0r4x
+
+r0r4x is a multi-modal intelligence platform tracking humanoid robotics acceleration, macro-level AI adoption dynamics, geopolitical conflict signals, and real-time global AI/war narratives.
+
+Further information available at: **[https://r0r4x.com](https://r0r4x.com)**
+
